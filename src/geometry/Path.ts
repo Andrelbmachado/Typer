@@ -35,3 +35,11 @@ export function pathToSvgD(path: GlyphPath): string {
   }
   return d
 }
+
+/** Combined `d` string for all closed contours, so nested counters render as holes (nonzero fill rule). */
+export function pathsToSvgD(paths: GlyphPath[]): string {
+  return paths
+    .filter((p) => p.closed)
+    .map(pathToSvgD)
+    .join(' ')
+}
