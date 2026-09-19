@@ -1,18 +1,29 @@
 import { useEditorStore, type ToolId } from '../store/editorStore'
+import {
+  IconSelect,
+  IconPen,
+  IconNode,
+  IconRectangle,
+  IconBrush,
+  IconEraser,
+  IconScissors,
+  IconText,
+  IconZoom,
+  IconHand,
+  IconMore,
+} from './icons'
 
-const TOOLS: { id: ToolId; label: string; shortcut: string }[] = [
-  { id: 'select', label: 'Selection', shortcut: 'V' },
-  { id: 'node', label: 'Node', shortcut: 'A' },
-  { id: 'pen', label: 'Pen', shortcut: 'P' },
-  { id: 'add-node', label: 'Add Node', shortcut: '+' },
-  { id: 'delete-node', label: 'Delete Node', shortcut: '-' },
-  { id: 'scissors', label: 'Scissors', shortcut: 'C' },
-  { id: 'knife', label: 'Knife', shortcut: 'K' },
-  { id: 'brush', label: 'Brush', shortcut: 'B' },
-  { id: 'shape', label: 'Shape', shortcut: 'S' },
-  { id: 'fill', label: 'Fill', shortcut: 'F' },
-  { id: 'hand', label: 'Hand', shortcut: 'H' },
-  { id: 'zoom', label: 'Zoom', shortcut: 'Z' },
+const TOOLS: { id: ToolId; label: string; shortcut: string; Icon: typeof IconSelect }[] = [
+  { id: 'select', label: 'Seleção', shortcut: 'V', Icon: IconSelect },
+  { id: 'pen', label: 'Caneta', shortcut: 'P', Icon: IconPen },
+  { id: 'node', label: 'Nó', shortcut: 'A', Icon: IconNode },
+  { id: 'shape', label: 'Retângulo', shortcut: 'S', Icon: IconRectangle },
+  { id: 'brush', label: 'Pincel', shortcut: 'B', Icon: IconBrush },
+  { id: 'delete-node', label: 'Borracha', shortcut: 'E', Icon: IconEraser },
+  { id: 'scissors', label: 'Tesoura', shortcut: 'C', Icon: IconScissors },
+  { id: 'fill', label: 'Texto', shortcut: 'T', Icon: IconText },
+  { id: 'zoom', label: 'Zoom', shortcut: 'Z', Icon: IconZoom },
+  { id: 'hand', label: 'Mão', shortcut: 'H', Icon: IconHand },
 ]
 
 export function Toolbar() {
@@ -20,17 +31,21 @@ export function Toolbar() {
   const setTool = useEditorStore((s) => s.setTool)
 
   return (
-    <div className="toolbar">
-      {TOOLS.map((t) => (
+    <div className="toolbar-floating">
+      {TOOLS.map(({ id, label, shortcut, Icon }) => (
         <button
-          key={t.id}
-          className={t.id === selectedTool ? 'tool-btn active' : 'tool-btn'}
-          title={`${t.label} (${t.shortcut})`}
-          onClick={() => setTool(t.id)}
+          key={id}
+          className={id === selectedTool ? 'tool-btn active' : 'tool-btn'}
+          title={`${label} (${shortcut})`}
+          onClick={() => setTool(id)}
         >
-          {t.shortcut}
+          <Icon />
         </button>
       ))}
+      <div className="tool-divider" />
+      <button className="tool-btn" title="Mais ferramentas">
+        <IconMore />
+      </button>
     </div>
   )
 }

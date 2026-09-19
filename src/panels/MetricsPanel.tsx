@@ -4,15 +4,16 @@ import { useEditorStore } from '../store/editorStore'
 export function MetricsPanel() {
   const editingGlyph = useEditorStore((s) => s.editingGlyph)
   const glyph = useProjectStore((s) => s.project.glyphs[editingGlyph])
+  const unitsPerEm = useProjectStore((s) => s.project.font.unitsPerEm)
   const updateGlyphMetrics = useProjectStore((s) => s.updateGlyphMetrics)
 
   if (!glyph) return null
 
   return (
     <div className="panel">
-      <h3>Métricas — {editingGlyph === ' ' ? 'space' : editingGlyph}</h3>
+      <h3>Propriedades</h3>
       <label className="field-row">
-        <span>Advance Width</span>
+        <span>Largura</span>
         <input
           type="number"
           value={glyph.metrics.advanceWidth}
@@ -20,7 +21,7 @@ export function MetricsPanel() {
         />
       </label>
       <label className="field-row">
-        <span>Left Bearing</span>
+        <span>Side Bearing (L)</span>
         <input
           type="number"
           value={glyph.metrics.leftBearing}
@@ -28,12 +29,16 @@ export function MetricsPanel() {
         />
       </label>
       <label className="field-row">
-        <span>Right Bearing</span>
+        <span>Side Bearing (R)</span>
         <input
           type="number"
           value={glyph.metrics.rightBearing}
           onChange={(e) => updateGlyphMetrics(editingGlyph, { rightBearing: Number(e.target.value) })}
         />
+      </label>
+      <label className="field-row">
+        <span>Unidade (UPM)</span>
+        <input type="number" value={unitsPerEm} readOnly />
       </label>
     </div>
   )

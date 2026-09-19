@@ -14,8 +14,8 @@ export function GuidesPanel() {
   const updateGuide = useProjectStore((s) => s.updateGuide)
 
   return (
-    <div className="panel">
-      <h3>Guias</h3>
+    <details className="panel panel-collapsible">
+      <summary>Guias da fonte</summary>
       {GUIDE_LABELS.map(({ key, label }) => (
         <label key={key} className="field-row">
           <span>{label}</span>
@@ -26,6 +26,6 @@ export function GuidesPanel() {
           />
         </label>
       ))}
-    </div>
+    </details>
   )
 }

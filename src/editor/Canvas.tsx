@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useProjectStore } from '../store/projectStore'
 import { useEditorStore } from '../store/editorStore'
 import { pathToSvgD, createPath } from '../geometry/Path'
@@ -21,7 +21,10 @@ export function Canvas() {
 
   const { guides } = project
 
-  ensureGlyph(editingGlyph, editingGlyph.codePointAt(0) ?? null)
+  useEffect(() => {
+    ensureGlyph(editingGlyph, editingGlyph.codePointAt(0) ?? null)
+  }, [editingGlyph, ensureGlyph])
+
   const glyph = project.glyphs[editingGlyph]
 
   // font units -> screen px: fit [descender, ascender] into the available vertical space
@@ -86,7 +89,15 @@ export function Canvas() {
   function handleNodePointerDown(e: React.PointerEvent, node: PathNode) {
     e.stopPropagation()
     if (selectedTool !== 'node' && selectedTool !== 'select') return
-    setSelectedNodeIds([node.id])
+    if (e.shiftKey) {
+      setSelectedNodeIds(
+        selectedNodeIds.includes(node.id)
+          ? selectedNodeIds.filter((id) => id !== node.id)
+          : [...selectedNodeIds, node.id],
+      )
+    } else if (!selectedNodeIds.includes(node.id)) {
+      setSelectedNodeIds([node.id])
+    }
     setDraggingNodeId(node.id)
     ;(e.target as Element).setPointerCapture(e.pointerId)
   }
