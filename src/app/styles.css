@@ -1,0 +1,208 @@
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: #1d1d1d;
+  color: #eeeeee;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+}
+
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.menubar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 0 12px;
+  height: 36px;
+  background: #252525;
+  border-bottom: 1px solid #373737;
+  flex-shrink: 0;
+}
+
+.brand {
+  font-weight: 600;
+  margin-right: 8px;
+}
+
+.menu-item {
+  color: #999;
+  cursor: default;
+}
+
+.export-btn {
+  margin-left: auto;
+  background: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.export-btn:hover {
+  background: #1d4ed8;
+}
+
+.workspace {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+}
+
+.toolbar {
+  width: 44px;
+  background: #252525;
+  border-right: 1px solid #373737;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0;
+  gap: 2px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.tool-btn {
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #eee;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.tool-btn:hover {
+  background: #333;
+}
+
+.tool-btn.active {
+  background: #2563eb;
+  border-color: #3b82f6;
+}
+
+.canvas-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  min-width: 0;
+  overflow: auto;
+}
+
+.canvas-title {
+  color: #999;
+  margin-bottom: 8px;
+  font-size: 12px;
+}
+
+.glyph-canvas {
+  width: min(70vh, 100%);
+  aspect-ratio: 1;
+  background: #fff;
+  border: 1px solid #373737;
+}
+
+.right-panel {
+  width: 220px;
+  background: #252525;
+  border-left: 1px solid #373737;
+  padding: 12px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.panel {
+  margin-bottom: 20px;
+}
+
+.panel h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  color: #999;
+  margin: 0 0 8px;
+  letter-spacing: 0.05em;
+}
+
+.field-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  gap: 8px;
+}
+
+.field-row span {
+  color: #ccc;
+}
+
+.field-row input {
+  width: 70px;
+  background: #1d1d1d;
+  border: 1px solid #373737;
+  color: #eee;
+  padding: 3px 6px;
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.glyph-bar {
+  height: 90px;
+  background: #252525;
+  border-top: 1px solid #373737;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.glyph-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 6px;
+}
+
+.glyph-cell {
+  width: 26px;
+  height: 26px;
+  background: #1d1d1d;
+  border: 1px solid #373737;
+  color: #ccc;
+  cursor: pointer;
+  font-size: 12px;
+  border-radius: 3px;
+}
+
+.glyph-cell:hover {
+  border-color: #2563eb;
+}
+
+.glyph-cell.active {
+  background: #2563eb;
+  color: #fff;
+  border-color: #3b82f6;
+}
+
+.glyph-cell.started {
+  border-color: #f59e0b;
+}
+
+.glyph-cell.done {
+  border-color: #22c55e;
+}
