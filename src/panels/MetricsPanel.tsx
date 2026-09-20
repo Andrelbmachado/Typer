@@ -1,5 +1,7 @@
 import { useProjectStore } from '../store/projectStore'
 import { useEditorStore } from '../store/editorStore'
+import { ScrubNumberInput } from '../components/ScrubNumberInput'
+import { PanelSection } from '../components/PanelSection'
 
 export function MetricsPanel() {
   const editingGlyph = useEditorStore((s) => s.editingGlyph)
@@ -10,36 +12,36 @@ export function MetricsPanel() {
   if (!glyph) return null
 
   return (
-    <div className="panel">
-      <h3>Propriedades</h3>
+    <PanelSection title="Propriedades">
       <label className="field-row">
         <span>Largura</span>
-        <input
-          type="number"
+        <ScrubNumberInput
+          label="Largura"
           value={glyph.metrics.advanceWidth}
-          onChange={(e) => updateGlyphMetrics(editingGlyph, { advanceWidth: Number(e.target.value) })}
+          min={1}
+          onChange={(value) => updateGlyphMetrics(editingGlyph, { advanceWidth: value })}
         />
       </label>
       <label className="field-row">
         <span>Side Bearing (L)</span>
-        <input
-          type="number"
+        <ScrubNumberInput
+          label="Side Bearing esquerdo"
           value={glyph.metrics.leftBearing}
-          onChange={(e) => updateGlyphMetrics(editingGlyph, { leftBearing: Number(e.target.value) })}
+          onChange={(value) => updateGlyphMetrics(editingGlyph, { leftBearing: value })}
         />
       </label>
       <label className="field-row">
         <span>Side Bearing (R)</span>
-        <input
-          type="number"
+        <ScrubNumberInput
+          label="Side Bearing direito"
           value={glyph.metrics.rightBearing}
-          onChange={(e) => updateGlyphMetrics(editingGlyph, { rightBearing: Number(e.target.value) })}
+          onChange={(value) => updateGlyphMetrics(editingGlyph, { rightBearing: value })}
         />
       </label>
       <label className="field-row">
         <span>Unidade (UPM)</span>
-        <input type="number" value={unitsPerEm} readOnly />
+        <ScrubNumberInput label="Unidade por em" value={unitsPerEm} readOnly />
       </label>
-    </div>
+    </PanelSection>
   )
 }
