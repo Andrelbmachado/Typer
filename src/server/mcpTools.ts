@@ -1,7 +1,7 @@
 import { McpServer } from '@modelcontextprotocol/server'
 import * as z from 'zod/v4'
 import { PRESETS } from '../../mcp/presets'
-import { createProjectSchema, presetNameSchema, projectIdSchema, upsertGlyphsSchema, validationSchema } from './contracts'
+import { createProjectSchema, createReferenceSetSchema, presetNameSchema, projectIdSchema, referenceProfileSchema, upsertGlyphsSchema, validationSchema } from './contracts'
 import { TyperService, typerService } from './typerService'
 
 function result<T extends object>(data: T) {
@@ -15,7 +15,7 @@ function result<T extends object>(data: T) {
 export function createTyperMcpServer(service: TyperService = typerService) {
   const server = new McpServer(
     { name: 'typer-font-studio', version: '1.1.0' },
-    { instructions: 'Crie ou leia um projeto, consulte um preset antes de gerar vetores, grave glifos em lote, valide e só então exporte TTF. Coordenadas usam eixo Y para cima em uma grade UPM 1000. Nunca copie contornos proprietários.' },
+    { instructions: 'Crie ou leia um projeto, consulte um preset ou perfil de referência antes de gerar vetores, grave glifos em lote, valide e só então exporte TTF. Coordenadas usam eixo Y para cima em uma grade UPM 1000. Comece pelo estudo ABC antes de ampliar uma família. Nunca copie contornos proprietários.' },
   )
 
   server.registerTool('typer_list_projects', {
@@ -39,6 +39,17 @@ export function createTyperMcpServer(service: TyperService = typerService) {
   server.registerTool('typer_get_preset', {
     title: 'Consultar preset vetorial', description: 'Retorna regras métricas e vetoriais para orientar a construção consistente de glifos.', inputSchema: z.object({ preset: presetNameSchema }),
   }, async ({ preset }) => result({ preset: PRESETS[preset] }))
+
+  server.registerTool('typer_get_reference_profile', {
+    title: 'Consultar perfil de referência visual', description: 'Retorna uma direção de estilo original para gerar vetores editáveis. Não rastreia ou copia contornos de uma imagem ou fonte.', inputSchema: z.object({ profile: referenceProfileSchema }),
+  }, async ({ profile }) => result({ profile: service.getReferenceProfile(profile) }))
+
+  server.registerTool('typer_create_reference_set', {
+    title: 'Criar conjunto tipográfico por perfil', description: 'Cria o estudo ABC ou o conjunto completo de um perfil, grava a proveniência e valida curvas Bézier, contraformas e métricas antes de salvar.', inputSchema: createReferenceSetSchema,
+  }, async ({ familyName, profile }) => {
+    const created = await service.createReferenceSet(familyName, profile)
+    return result({ id: created.file.id, name: created.file.name, file: created.filePath, profile: created.profile, glyphCount: created.glyphCount, geometry: created.geometry, revision: created.revision })
+  })
 
   server.registerTool('typer_apply_preset', {
     title: 'Aplicar preset', description: 'Atualiza as métricas globais e guias de um projeto sem apagar seus glifos.', inputSchema: z.object({ projectId: projectIdSchema, preset: presetNameSchema }),

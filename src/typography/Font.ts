@@ -26,6 +26,17 @@ export interface ReferenceAsset {
   visible: boolean
 }
 
+/**
+ * Records a reusable design direction used to generate a project. It stores
+ * intent, not a source font or a raster trace, so generated outlines remain
+ * original and editable.
+ */
+export interface ReferenceProfileProvenance {
+  id: string
+  mode: 'style-direction'
+  label: string
+}
+
 export const DEFAULT_GUIDES: FontGuides = {
   capHeight: 700,
   xHeight: 500,
@@ -56,6 +67,7 @@ export interface FontProject {
   guides: FontGuides
   guideSettings?: GuideSettings
   references?: ReferenceAsset[]
+  referenceProfile?: ReferenceProfileProvenance
   glyphs: Record<string, Glyph>
   kerning: Record<string, number>
 }

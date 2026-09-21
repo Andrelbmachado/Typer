@@ -10,8 +10,9 @@ import { NodeStreamableHTTPServerTransport } from '@modelcontextprotocol/node'
 import * as z from 'zod/v4'
 import { parseProjectFile, toProjectFile } from '../src/typography/ProjectFile'
 import { PRESETS } from '../mcp/presets'
+import { REFERENCE_STYLE_PROFILES } from '../mcp/referenceProfiles'
 import { AccessStore, AccessStoreError, verifyAdminToken } from '../src/server/accessStore'
-import { API_SCOPES, createProjectSchema, presetNameSchema, projectIdSchema, upsertGlyphsSchema, validationSchema, type ApiScope } from '../src/server/contracts'
+import { API_SCOPES, createProjectSchema, createReferenceSetSchema, presetNameSchema, projectIdSchema, referenceProfileSchema, upsertGlyphsSchema, validationSchema, type ApiScope } from '../src/server/contracts'
 import { createTyperMcpServer } from '../src/server/mcpTools'
 import { TyperService, TyperServiceError, typerService } from '../src/server/typerService'
 
@@ -86,12 +87,23 @@ export async function buildApiServer(options: ApiServerOptions = {}) {
     if (!parsed.success) return apiError(reply, request, 404, 'preset_not_found', 'Preset não encontrado.')
     return { preset: PRESETS[parsed.data] }
   })
+  app.get('/v1/reference-profiles', { preHandler: requireScopes(['projects:read']) }, async () => ({ profiles: Object.values(REFERENCE_STYLE_PROFILES) }))
+  app.get('/v1/reference-profiles/:profile', { preHandler: requireScopes(['projects:read']) }, async (request, reply) => {
+    const parsed = referenceProfileSchema.safeParse((request.params as { profile?: string }).profile)
+    if (!parsed.success) return apiError(reply, request, 404, 'reference_profile_not_found', 'Perfil de referência não encontrado.')
+    return { profile: service.getReferenceProfile(parsed.data) }
+  })
 
   app.get('/v1/projects', { preHandler: requireScopes(['projects:read']) }, async () => ({ projects: await service.listProjects() }))
   app.post('/v1/projects', { preHandler: requireScopes(['projects:write']) }, async (request, reply) => {
     const parsed = createProjectSchema.parse(request.body)
     const file = await service.createProject(parsed.familyName, parsed.preset)
     return reply.status(201).header('etag', (await service.readProject(file.id)).revision).send(file)
+  })
+  app.post('/v1/projects/reference-set', { preHandler: requireScopes(['projects:write']) }, async (request, reply) => {
+    const parsed = createReferenceSetSchema.parse(request.body)
+    const created = await service.createReferenceSet(parsed.familyName, parsed.profile)
+    return reply.status(201).header('etag', created.revision).send({ project: created.file, profile: created.profile, glyphCount: created.glyphCount, geometry: created.geometry, revision: created.revision })
   })
 
   app.get('/v1/projects/:projectId', { preHandler: requireScopes(['projects:read']) }, async (request, reply) => {

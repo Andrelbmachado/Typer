@@ -61,6 +61,8 @@ mcp/
 ├── server.ts                oito ferramentas MCP via stdio
 ├── projectFiles.ts          sandbox de arquivos, normalização e validação
 ├── presets.ts               presets e parâmetros vetoriais
+├── referenceProfiles.ts     perfis originais e estudo ABC com eixos/curvas Bézier
+├── referenceQuality.ts      qualidade de contorno, Bézier e winding de contraformas
 ├── neutralHelvetica.ts      amostra original H/e/l/v/t/i/c/a
 └── integrationTest.ts       cliente MCP real, TTF e espécime FontFace
 ```
@@ -99,7 +101,7 @@ O serviço nunca recebe caminhos arbitrários: ferramentas trabalham por `projec
 
 `TYPER_ACCESS_DB` aponta para o SQLite. O banco registra apenas hash SHA-256 da API key, prefixo, escopos, status, datas e auditoria. Nenhum endpoint devolve o segredo após `POST /v1/admin/keys`. O token mestre é exclusivamente `TYPER_ADMIN_TOKEN`/`X-Typer-Admin-Token` e não é uma API key.
 
-`typer_upsert_glyphs` recebe Unicode, métricas e contornos. IDs podem ser omitidos e são criados pelo servidor. Sempre chamar `typer_validate_project` com os caracteres obrigatórios antes de exportar.
+`typer_get_reference_profile` expõe direções visuais originais e coordenadas de construção. `typer_create_reference_set` começa pelo perfil `reference-neutral-regular-abc`: crie e revise `A/B/C` na prancheta 1000 × 1000 antes de ampliar a família. A mantém os vértices espelhados no eixo X=300; B e C exigem alças Bézier contínuas. `typer_upsert_glyphs` recebe Unicode, métricas e contornos. IDs podem ser omitidos e são criados pelo servidor. Sempre chamar `typer_validate_project` com os caracteres obrigatórios antes de exportar.
 
 Para provar interoperabilidade:
 

@@ -15,7 +15,8 @@
     "api:dev": "tsx watch api/server.ts",
     "openapi:check": "tsx api/checkOpenApi.ts",
     "test:api": "TYPER_PROJECTS_DIR=./output/api/projects tsx api/integrationTest.ts",
-    "test:mcp": "tsx mcp/integrationTest.ts"
+    "test:mcp": "tsx mcp/integrationTest.ts",
+    "font:reference": "tsx mcp/createReferenceSans.ts"
   },
   "dependencies": {
     "@fastify/cors": "^11.3.0",

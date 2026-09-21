@@ -24,6 +24,15 @@ paths:
       operationId: getPreset
       parameters: [{ $ref: '#/components/parameters/Preset' }]
       responses: { '200': { description: Preset encontrado }, '404': { $ref: '#/components/responses/Error' } }
+  /v1/reference-profiles:
+    get:
+      operationId: listReferenceProfiles
+      responses: { '200': { description: Perfis de referência visual originais } }
+  /v1/reference-profiles/{profile}:
+    get:
+      operationId: getReferenceProfile
+      parameters: [{ $ref: '#/components/parameters/ReferenceProfile' }]
+      responses: { '200': { description: Perfil de referência encontrado }, '404': { $ref: '#/components/responses/Error' } }
   /v1/projects:
     get:
       operationId: listProjects
@@ -44,6 +53,12 @@ paths:
       parameters: [{ $ref: '#/components/parameters/ProjectId' }, { name: If-Match, in: header, required: true, schema: { type: string } }]
       requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TyperProjectFile' } } } }
       responses: { '200': { description: Projeto atualizado }, '409': { $ref: '#/components/responses/Error' }, '428': { $ref: '#/components/responses/Error' } }
+  /v1/projects/reference-set:
+    post:
+      operationId: createReferenceSet
+      x-openai-isConsequential: true
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CreateReferenceSet' } } } }
+      responses: { '201': { description: Projeto e conjunto de glifos de referência criados }, '422': { $ref: '#/components/responses/Error' } }
   /v1/projects/{projectId}/preset:
     post:
       operationId: applyPreset
@@ -81,16 +96,22 @@ components:
   parameters:
     ProjectId: { name: projectId, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]+$' } }
     Preset: { name: preset, in: path, required: true, schema: { $ref: '#/components/schemas/PresetName' } }
+    ReferenceProfile: { name: profile, in: path, required: true, schema: { $ref: '#/components/schemas/ReferenceProfileName' } }
   responses:
     Error:
       description: Erro padronizado
       content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
   schemas:
     PresetName: { type: string, enum: [neutral-grotesk, geometric-sans, humanist-sans] }
+    ReferenceProfileName: { type: string, enum: [reference-neutral-regular-abc, reference-neutral-regular], default: reference-neutral-regular-abc }
     CreateProject:
       type: object
       required: [familyName]
       properties: { familyName: { type: string }, preset: { $ref: '#/components/schemas/PresetName' } }
+    CreateReferenceSet:
+      type: object
+      required: [familyName]
+      properties: { familyName: { type: string }, profile: { $ref: '#/components/schemas/ReferenceProfileName' } }
     UpsertGlyphs:
       type: object
       required: [glyphs]

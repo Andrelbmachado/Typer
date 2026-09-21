@@ -8,6 +8,7 @@ try {
   const api = await SwaggerParser.validate(apiFile)
   const requiredPaths = [
     '/healthz', '/v1/presets', '/v1/projects', '/v1/projects/{projectId}',
+    '/v1/reference-profiles', '/v1/reference-profiles/{profile}', '/v1/projects/reference-set',
     '/v1/projects/{projectId}/glyphs', '/v1/projects/{projectId}/exports/ttf', '/v1/exports/{downloadToken}',
   ]
   for (const expected of requiredPaths) {

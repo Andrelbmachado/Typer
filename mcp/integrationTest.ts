@@ -6,6 +6,7 @@ import { Client } from '@modelcontextprotocol/client'
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio'
 import opentype from 'opentype.js'
 import { neutralHelveticaGlyphs } from './neutralHelvetica'
+import { REFERENCE_NEUTRAL_REGULAR_ABC_CHARACTERS } from './referenceProfiles'
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const outputDir = path.join(root, 'output', 'mcp')
@@ -30,7 +31,7 @@ try {
   await client.connect(transport)
   const listed = await client.listTools()
   const names = new Set(listed.tools.map((tool) => tool.name))
-  for (const name of ['typer_list_projects', 'typer_create_project', 'typer_read_project', 'typer_get_preset', 'typer_apply_preset', 'typer_upsert_glyphs', 'typer_validate_project', 'typer_export_ttf']) {
+  for (const name of ['typer_list_projects', 'typer_create_project', 'typer_read_project', 'typer_get_preset', 'typer_get_reference_profile', 'typer_create_reference_set', 'typer_apply_preset', 'typer_upsert_glyphs', 'typer_validate_project', 'typer_export_ttf']) {
     assert.ok(names.has(name), `Ferramenta MCP ausente: ${name}`)
   }
 
@@ -40,6 +41,15 @@ try {
 
   const preset = structured<{ preset: { metrics: { unitsPerEm: number } } }>(await client.callTool({ name: 'typer_get_preset', arguments: { preset: 'neutral-grotesk' } }))
   assert.equal(preset.preset.metrics.unitsPerEm, 1000)
+
+  const referenceProfile = structured<{ profile: { id: string; characters: string } }>(await client.callTool({ name: 'typer_get_reference_profile', arguments: { profile: 'reference-neutral-regular-abc' } }))
+  assert.equal(referenceProfile.profile.characters, REFERENCE_NEUTRAL_REGULAR_ABC_CHARACTERS)
+  const reference = structured<{ id: string; glyphCount: number; geometry: { valid: boolean } }>(await client.callTool({ name: 'typer_create_reference_set', arguments: { familyName: 'Typer Reference MCP', profile: 'reference-neutral-regular-abc' } }))
+  assert.equal(reference.glyphCount, 3)
+  assert.equal(reference.geometry.valid, true)
+  const referenceValidation = structured<{ valid: boolean; glyphCount: number }>(await client.callTool({ name: 'typer_validate_project', arguments: { projectId: reference.id, requiredCharacters: [...REFERENCE_NEUTRAL_REGULAR_ABC_CHARACTERS] } }))
+  assert.equal(referenceValidation.valid, true)
+  assert.equal(referenceValidation.glyphCount, 3)
 
   const glyphs = neutralHelveticaGlyphs()
   const updated = structured<{ updated: string[] }>(await client.callTool({ name: 'typer_upsert_glyphs', arguments: { projectId, glyphs } }))

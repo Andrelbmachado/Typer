@@ -5,7 +5,9 @@ import { exportProjectToFont } from '../font-engine/OpenTypeExporter'
 import { toProjectFile, type TyperProjectFile } from '../typography/ProjectFile'
 import { applyPreset, PRESETS, type PresetName } from '../../mcp/presets'
 import { createProjectFile, ensureProjectsRoot, listProjectFiles, projectPath, projectsRoot, readProjectFile, upsertGlyphs, validateProject, writeProjectFile } from '../../mcp/projectFiles'
-import type { GlyphInput, PresetNameInput } from './contracts'
+import { buildGlyphsForReferenceProfile, getReferenceStyleProfile } from '../../mcp/referenceProfiles'
+import { validateReferenceGlyphGeometry } from '../../mcp/referenceQuality'
+import type { GlyphInput, PresetNameInput, ReferenceProfileInput } from './contracts'
 
 export class TyperServiceError extends Error {
   constructor(public readonly code: string, message: string, public readonly statusCode = 400, public readonly details?: unknown) {
@@ -51,6 +53,26 @@ export class TyperService {
 
   async createProject(familyName: string, preset: PresetNameInput = 'neutral-grotesk') {
     return createProjectFile(familyName, preset as PresetName)
+  }
+
+  getReferenceProfile(profileId: ReferenceProfileInput) {
+    const profile = getReferenceStyleProfile(profileId)
+    if (!profile) throw new TyperServiceError('reference_profile_not_found', 'Perfil de referência não encontrado.', 404)
+    return profile
+  }
+
+  async createReferenceSet(familyName: string, profileId: ReferenceProfileInput = 'reference-neutral-regular-abc') {
+    const profile = this.getReferenceProfile(profileId)
+    const file = await createProjectFile(familyName, 'neutral-grotesk')
+    const glyphs = buildGlyphsForReferenceProfile(profile.id)
+    const geometry = validateReferenceGlyphGeometry(glyphs)
+    if (!geometry.valid) throw new TyperServiceError('reference_geometry_invalid', 'O conjunto de referência não passou na validação geométrica.', 422, geometry)
+
+    file.project.referenceProfile = { id: profile.id, mode: profile.mode, label: profile.label }
+    file.project = upsertGlyphs(file.project, glyphs)
+    await writeProjectFile(file)
+    const project = await this.readProject(file.id)
+    return { ...project, filePath: projectPath(file.id), profile, glyphCount: glyphs.length, geometry }
   }
 
   async readProject(projectId: string): Promise<ProjectWithRevision> {

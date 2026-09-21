@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import opentype from 'opentype.js'
 import { neutralHelveticaGlyphs } from '../mcp/neutralHelvetica'
+import { REFERENCE_NEUTRAL_REGULAR_ABC_CHARACTERS } from '../mcp/referenceProfiles'
 import { AccessStore } from '../src/server/accessStore'
 import { buildApiServer } from './server'
 
@@ -34,6 +35,21 @@ try {
   assert.ok(!JSON.stringify(keys).includes(createdKey.secret), 'O segredo não pode voltar depois da criação.')
 
   const auth = { authorization: `Bearer ${createdKey.secret}` }
+  const profiles = json<{ profiles: Array<{ id: string }> }>(await app.inject({ method: 'GET', url: '/v1/reference-profiles', headers: auth }), 200)
+  assert.ok(profiles.profiles.some((profile) => profile.id === 'reference-neutral-regular-abc'))
+  const reference = json<{ project: { id: string; project: { referenceProfile?: { id: string } } }; glyphCount: number; geometry: { valid: boolean } }>(await app.inject({
+    method: 'POST', url: '/v1/projects/reference-set', headers: auth,
+    payload: { familyName: 'Typer Reference API', profile: 'reference-neutral-regular-abc' },
+  }), 201)
+  assert.equal(reference.glyphCount, 3)
+  assert.equal(reference.geometry.valid, true)
+  assert.equal(reference.project.project.referenceProfile?.id, 'reference-neutral-regular-abc')
+  const referenceValidation = json<{ valid: boolean }>(await app.inject({
+    method: 'POST', url: `/v1/projects/${reference.project.id}/validate`, headers: auth,
+    payload: { requiredCharacters: [...REFERENCE_NEUTRAL_REGULAR_ABC_CHARACTERS] },
+  }), 200)
+  assert.equal(referenceValidation.valid, true)
+
   const project = json<{ id: string }>(await app.inject({ method: 'POST', url: '/v1/projects', headers: auth, payload: { familyName: 'Typer Neutral API', preset: 'neutral-grotesk' } }), 201)
   const projectId = project.id
   const read = await app.inject({ method: 'GET', url: `/v1/projects/${projectId}`, headers: auth })
@@ -80,7 +96,7 @@ try {
     payload: { jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} },
   })
   assert.equal(mcpTools.statusCode, 200)
-  for (const tool of ['typer_list_projects', 'typer_create_project', 'typer_read_project', 'typer_get_preset', 'typer_apply_preset', 'typer_upsert_glyphs', 'typer_validate_project', 'typer_export_ttf']) {
+  for (const tool of ['typer_list_projects', 'typer_create_project', 'typer_read_project', 'typer_get_preset', 'typer_get_reference_profile', 'typer_create_reference_set', 'typer_apply_preset', 'typer_upsert_glyphs', 'typer_validate_project', 'typer_export_ttf']) {
     assert.match(mcpTools.body, new RegExp(tool), `Ferramenta HTTP MCP ausente: ${tool}`)
   }
 

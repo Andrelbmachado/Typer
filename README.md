@@ -16,7 +16,7 @@ npm run openapi:check
 npm run test:api
 ```
 
-Validação completa do MCP, incluindo criação de oito glifos, exportação e parse do TTF:
+Validação completa do MCP, incluindo o estudo vetorial `A/B/C`, a amostra `Helvetica`, exportação e parse do TTF:
 
 ```bash
 npm run test:mcp
@@ -89,12 +89,14 @@ Ferramentas disponíveis:
 - `typer_create_project`
 - `typer_read_project`
 - `typer_get_preset`
+- `typer_get_reference_profile`
+- `typer_create_reference_set`
 - `typer_apply_preset`
 - `typer_upsert_glyphs`
 - `typer_validate_project`
 - `typer_export_ttf`
 
-Fluxo recomendado para uma IA: criar projeto → consultar/aplicar preset → inserir glifos em lote → validar caracteres obrigatórios → exportar TTF. A fonte de teste `Typer Neutral` cria `H/e/l/v/t/i/c/a` com desenho original de uma sans neutra, não uma cópia de Helvetica.
+Fluxo recomendado para uma IA: consultar `reference-neutral-regular-abc` → criar o estudo `A/B/C` → validar curvas, eixos e contraformas → revisar no canvas 1000 × 1000 → só então ampliar a família. Para geração manual, crie projeto → consulte/aplique preset → insira glifos em lote → valide caracteres obrigatórios → exporte TTF. A fonte de teste `Typer Neutral` cria `H/e/l/v/t/i/c/a` com desenho original de uma sans neutra, não uma cópia de Helvetica.
 
 ## API REST, chave e sincronização
 
