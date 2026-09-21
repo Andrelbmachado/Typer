@@ -95,6 +95,10 @@ translate(MARGIN, MARGIN + ascender * scale) scale(scale, -scale)
 
 Eventos de ponteiro usam refs porque eventos consecutivos podem ocorrer antes do próximo render React.
 
+## Fundamentos da caneta
+
+`src/geometry/Pen.ts` é a fonte única para snaps e arcos: Shift quantiza uma direção em incrementos de 45° (incluindo horizontal/vertical), e cada quarto de círculo usa alça `0.5522847498 × raio`. A pen mantém o contorno aberto ativo após cada nó; clique e arraste cria uma curva Bézier, o próximo clique cria o próximo segmento, e `Option/Alt + clique` no último nó remove suas alças para que o segmento seguinte seja reto. O script `npm run pen:exercises` gera um `.typer.json` de sete trajetos abertos para praticar esses casos antes de desenhar glifos.
+
 ## MCP e formato de dados
 
 O serviço nunca recebe caminhos arbitrários: ferramentas trabalham por `projectId`, validado contra caracteres seguros, dentro de `TYPER_PROJECTS_DIR` (`TYPER_MCP_PROJECTS_DIR` é alias legado). Gravações `.typer.json` usam arquivo temporário + rename atômico. `stdout` do MCP stdio é exclusivo do JSON-RPC; logs usam `stderr`.

@@ -6,6 +6,7 @@ import { createNode, type PathNode } from '../geometry/Node'
 import { translateNode } from '../geometry/Align'
 import { guideAppearance, type GuideKey } from '../typography/Font'
 import { toolCursor } from './toolCursor'
+import { snapPointFromAnchor, snapVectorToAngle } from '../geometry/Pen'
 
 export const VIEW_SIZE = 1000
 const MARGIN = 100
@@ -161,12 +162,15 @@ export function Canvas() {
     if (selectedTool !== 'pen') return
     if (e.button !== 0) return
     const { x, y } = eventToFont(e)
-    const fx = Math.round(x)
-    const fy = Math.round(y)
     const currentGlyph = useProjectStore.getState().project.glyphs[editingGlyph]
     if (!currentGlyph) return
     const currentActiveId = activePathIdRef.current
     const currentActivePath = currentActiveId ? currentGlyph.paths.find((p) => p.id === currentActiveId) ?? null : null
+    const snapped = e.shiftKey && currentActivePath?.nodes.at(-1)
+      ? snapPointFromAnchor(currentActivePath.nodes.at(-1)!, { x, y })
+      : { x: Math.round(x), y: Math.round(y) }
+    const fx = snapped.x
+    const fy = snapped.y
 
     // closing an in-progress path: click near its own first node
     if (currentActivePath && currentActivePath.nodes.length > 1) {
@@ -217,8 +221,9 @@ export function Canvas() {
     if (!penDrag.moved && Math.hypot(dx, dy) < 2) return
     penDrag.moved = true
 
-    const handleOut = { x: Math.round(x), y: Math.round(y) }
-    const handleIn = { x: Math.round(2 * penDrag.start.x - x), y: Math.round(2 * penDrag.start.y - y) }
+    const vector = e.shiftKey ? snapVectorToAngle({ x: x - penDrag.start.x, y: y - penDrag.start.y }) : { x: x - penDrag.start.x, y: y - penDrag.start.y }
+    const handleOut = { x: Math.round(penDrag.start.x + vector.x), y: Math.round(penDrag.start.y + vector.y) }
+    const handleIn = { x: Math.round(penDrag.start.x - vector.x), y: Math.round(penDrag.start.y - vector.y) }
 
     updateCurrentGlyphPaths((paths) =>
       replacePath(paths, penDrag.pathId, (p) => ({
@@ -296,6 +301,9 @@ export function Canvas() {
         penDragRef.current = null
         setActivePathId(null)
         setCursorFont(null)
+      }
+      if (currentPath && e.altKey && pathId === currentPath.id && node.id === currentPath.nodes.at(-1)?.id) {
+        updateNode(pathId, node.id, { type: 'corner', handleIn: undefined, handleOut: undefined })
       }
       return
     }
