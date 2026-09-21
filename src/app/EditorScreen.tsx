@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { ChevronDown, Download, FileCode2, Home, Import } from 'lucide-react'
 import opentype from 'opentype.js'
+import { createRemoteProject, getApiKey, getRemoteProject, remoteToLocalProject, replaceRemoteProject, TyperApiError, type RemoteProject } from '../api/client'
 import { Canvas } from '../editor/Canvas'
 import { MiniGlyphPreview } from '../editor/MiniGlyphPreview'
 import { Toolbar } from '../panels/Toolbar'
@@ -43,9 +44,12 @@ export function EditorScreen({ projectId, onHome }: { projectId: string; onHome:
   const [hydrated, setHydrated] = useState(false)
   const [saveState, setSaveState] = useState<'saving' | 'saved'>('saved')
   const [error, setError] = useState<string | null>(null)
+  const [syncConflict, setSyncConflict] = useState<RemoteProject | null>(null)
   const [importOpen, setImportOpen] = useState(false)
   const [carousel, setCarousel] = useState<{ direction: 'previous' | 'next' | 'idle'; version: number }>({ direction: 'idle', version: 0 })
   const recordRef = useRef<ProjectRecord | null>(null)
+  const remoteRevisionRef = useRef<string | null>(null)
+  const localDirtyRef = useRef(false)
   const previousGlyphRef = useRef(editingGlyph)
   const importRef = useRef<HTMLInputElement>(null)
   const { prev, next } = useNeighborGlyphs(editingGlyph)
@@ -90,19 +94,40 @@ export function EditorScreen({ projectId, onHome }: { projectId: string; onHome:
 
   useEffect(() => {
     setHydrated(false)
-    void loadProjectRecord(projectId).then((record) => {
-      if (!record) {
+    setSyncConflict(null)
+    void (async () => {
+      try {
+        const local = await loadProjectRecord(projectId)
+        let record = local
+        if (getApiKey()) {
+          try {
+            const remote = await getRemoteProject(projectId)
+            remoteRevisionRef.current = remote.revision
+            if (!record || remote.updatedAt >= record.updatedAt) {
+              const remoteRecord = remoteToLocalProject(remote)
+              record = remoteRecord
+              await saveProjectRecord(remoteRecord)
+            }
+          } catch (reason) {
+            if (!(reason instanceof TyperApiError && (reason.code === 'server_unavailable' || reason.code === 'project_not_found'))) throw reason
+          }
+        }
+        if (!record) {
+          onHome()
+          return
+        }
+        recordRef.current = record
+        loadProjectIntoStore(record.project)
+        setHydrated(true)
+      } catch {
         onHome()
-        return
       }
-      recordRef.current = record
-      loadProjectIntoStore(record.project)
-      setHydrated(true)
-    }).catch(() => onHome())
+    })()
   }, [loadProjectIntoStore, onHome, projectId])
 
   useEffect(() => {
     if (!hydrated || !recordRef.current) return
+    localDirtyRef.current = true
     setSaveState('saving')
     const id = window.setTimeout(() => {
       if (!recordRef.current) return
@@ -110,10 +135,48 @@ export function EditorScreen({ projectId, onHome }: { projectId: string; onHome:
       void saveProjectRecord(record).then((saved) => {
         recordRef.current = saved
         setSaveState('saved')
+        if (!getApiKey() || !remoteRevisionRef.current) {
+          localDirtyRef.current = false
+          return
+        }
+        void replaceRemoteProject(saved, remoteRevisionRef.current).then((remote) => {
+          remoteRevisionRef.current = remote.revision
+          localDirtyRef.current = false
+        }).catch(async (reason) => {
+          if (reason instanceof TyperApiError && reason.code === 'revision_conflict') {
+            try { setSyncConflict(await getRemoteProject(saved.id)) } catch { setError('Há uma alteração remota que precisa ser resolvida.') }
+            return
+          }
+          // The local cache is deliberately kept when the automation service
+          // is offline, allowing editing to continue without a server.
+          if (!(reason instanceof TyperApiError && reason.code === 'server_unavailable')) setError(reason instanceof Error ? reason.message : 'Não foi possível sincronizar o projeto.')
+        })
       })
     }, 800)
     return () => window.clearTimeout(id)
   }, [hydrated, project])
+
+  useEffect(() => {
+    if (!hydrated || !getApiKey()) return
+    const poll = () => {
+      if (!recordRef.current) return
+      void getRemoteProject(recordRef.current.id).then(async (remote) => {
+        if (!recordRef.current || remote.revision === remoteRevisionRef.current) return
+        if (localDirtyRef.current) {
+          setSyncConflict(remote)
+          return
+        }
+        const record = remoteToLocalProject(remote)
+        remoteRevisionRef.current = remote.revision
+        recordRef.current = await saveProjectRecord(record)
+        loadProjectIntoStore(record.project)
+      }).catch(() => {
+        // Polling must never interrupt offline work.
+      })
+    }
+    const interval = window.setInterval(poll, 5000)
+    return () => window.clearInterval(interval)
+  }, [hydrated, loadProjectIntoStore])
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -181,6 +244,46 @@ export function EditorScreen({ projectId, onHome }: { projectId: string; onHome:
       recordRef.current = await saveProjectRecord({ ...recordRef.current, name: project.font.familyName, project })
     }
     onHome()
+  }
+
+  async function acceptServerVersion() {
+    if (!syncConflict) return
+    const revision = syncConflict.revision
+    const record = remoteToLocalProject(syncConflict)
+    recordRef.current = await saveProjectRecord(record)
+    remoteRevisionRef.current = revision
+    localDirtyRef.current = false
+    loadProjectIntoStore(record.project)
+    setSyncConflict(null)
+  }
+
+  async function keepLocalVersion() {
+    if (!syncConflict || !recordRef.current) return
+    try {
+      const remote = await replaceRemoteProject({ ...recordRef.current, name: project.font.familyName, project }, syncConflict.revision)
+      remoteRevisionRef.current = remote.revision
+      localDirtyRef.current = false
+      setSyncConflict(null)
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível manter a versão local.')
+    }
+  }
+
+  async function saveAsNewRemoteProject() {
+    if (!recordRef.current) return
+    try {
+      const created = await createRemoteProject(`${project.font.familyName} cópia`)
+      const fresh = remoteToLocalProject(created)
+      const local = { ...recordRef.current, id: fresh.id, name: `${project.font.familyName} cópia`, createdAt: fresh.createdAt, updatedAt: fresh.updatedAt, project }
+      const remote = await replaceRemoteProject(local, created.revision)
+      recordRef.current = await saveProjectRecord(local)
+      remoteRevisionRef.current = remote.revision
+      localDirtyRef.current = false
+      setSyncConflict(null)
+      window.location.hash = `#/editor/${encodeURIComponent(local.id)}`
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Não foi possível salvar uma cópia.')
+    }
   }
 
   async function importUpdate(file: File) {
@@ -252,6 +355,7 @@ export function EditorScreen({ projectId, onHome }: { projectId: string; onHome:
       </header>
 
       {error && <div className="editor-error" role="alert">{error}<button onClick={() => setError(null)}>Fechar</button></div>}
+      {syncConflict && <div className="sync-conflict" role="alert"><span><strong>Alteração remota detectada.</strong> Escolha como resolver este conflito de sincronização.</span><div><button onClick={() => void acceptServerVersion()}>Aceitar versão do servidor</button><button onClick={() => void keepLocalVersion()}>Manter versão local</button><button onClick={() => void saveAsNewRemoteProject()}>Salvar como novo projeto</button></div></div>}
 
       <div className="workspace">
         <main className="canvas-row">

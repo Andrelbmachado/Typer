@@ -14,7 +14,7 @@ A estrutura da Home se inspira em aplicativos criativos de desktop: navegação 
 
 ```text
 Topbar: marca Typer | contexto local
-Sidebar: Nova fonte | Importar | Home | Aprender | Seus projetos
+Sidebar: Nova fonte | Importar | Home | Aprender | Acesso API | Seus projetos
 Conteúdo: mensagem de entrada | recursos | projetos recentes
 ```
 
@@ -77,4 +77,6 @@ O botão Exportar inclui uma seta para cima e abre um menu claro com TTF, OTF, S
 
 ## Automação por IA
 
-IA não ocupa espaço visual privilegiado no produto. A integração acontece por MCP, fora da interface, e entrega `.typer.json` para importação explícita. Presets compartilham métricas e proporções, mas a IA continua responsável por gerar contornos válidos e revisar o resultado com `typer_validate_project`.
+IA não ocupa espaço visual privilegiado no produto. A integração acontece por MCP/API, fora do canvas, e respeita o mesmo contrato de projeto do editor. A central de acessos é uma tela administrativa clara e deliberadamente separada da criação tipográfica: token mestre efêmero, criação de chave, revelação única, cópia, escopos, revogação e exclusão confirmada.
+
+Com uma chave de API na sessão, projetos criados por IA aparecem na Home e o editor mostra uma faixa de resolução se houver conflito. Presets compartilham métricas e proporções, mas a IA continua responsável por gerar contornos válidos e revisar o resultado com `typer_validate_project` antes do TTF.

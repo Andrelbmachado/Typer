@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { BookOpen, FilePlus2, FolderOpen, Home, Import, MousePointer2, PenTool, PlugZap, Type } from 'lucide-react'
+import { BookOpen, FilePlus2, FolderOpen, Home, Import, KeyRound, MousePointer2, PenTool, PlugZap, Type } from 'lucide-react'
+import { createRemoteProject, getApiKey, listRemoteProjects, remoteToLocalProject, TyperApiError } from '../api/client'
 import { listProjectRecords, saveProjectRecord } from '../persistence/IndexedDB'
 import { pathToSvgD } from '../geometry/Path'
 import { createProjectRecord, parseProjectFile, type ProjectRecord } from '../typography/ProjectFile'
@@ -7,6 +8,7 @@ import { createProjectRecord, parseProjectFile, type ProjectRecord } from '../ty
 interface HomeScreenProps {
   onOpenProject: (id: string) => void
   onLearn: () => void
+  onAdmin: () => void
 }
 
 function ProjectThumbnail({ record }: { record: ProjectRecord }) {
@@ -28,20 +30,46 @@ function ProjectThumbnail({ record }: { record: ProjectRecord }) {
   )
 }
 
-export function HomeScreen({ onOpenProject, onLearn }: HomeScreenProps) {
+export function HomeScreen({ onOpenProject, onLearn, onAdmin }: HomeScreenProps) {
   const [projects, setProjects] = useState<ProjectRecord[]>([])
   const [error, setError] = useState<string | null>(null)
   const importRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    void listProjectRecords().then(setProjects).catch((reason: unknown) => setError(reason instanceof Error ? reason.message : 'Não foi possível carregar os projetos.'))
+    void (async () => {
+      try {
+        const local = await listProjectRecords()
+        setProjects(local)
+        if (!getApiKey()) return
+        const remote = await listRemoteProjects()
+        await Promise.all(remote.map((record) => saveProjectRecord(remoteToLocalProject(record))))
+        setProjects(await listProjectRecords())
+      } catch (reason) {
+        // The cache stays authoritative while a local API is unavailable.
+        if (!(reason instanceof TyperApiError && reason.code === 'server_unavailable')) {
+          setError(reason instanceof Error ? reason.message : 'Não foi possível carregar os projetos.')
+        }
+      }
+    })()
   }, [])
 
   async function createProject() {
     const suffix = projects.length + 1
-    const record = createProjectRecord(suffix === 1 ? 'Minha Fonte' : `Minha Fonte ${suffix}`)
-    await saveProjectRecord(record)
-    onOpenProject(record.id)
+    const name = suffix === 1 ? 'Minha Fonte' : `Minha Fonte ${suffix}`
+    try {
+      const remote = getApiKey() ? await createRemoteProject(name) : null
+      const record = remote ? remoteToLocalProject(remote) : createProjectRecord(name)
+      await saveProjectRecord(record)
+      onOpenProject(record.id)
+    } catch (reason) {
+      if (reason instanceof TyperApiError && reason.code === 'server_unavailable') {
+        const record = createProjectRecord(name)
+        await saveProjectRecord(record)
+        onOpenProject(record.id)
+        return
+      }
+      setError(reason instanceof Error ? reason.message : 'Não foi possível criar o projeto.')
+    }
   }
 
   async function importProject(file: File) {
@@ -69,6 +97,7 @@ export function HomeScreen({ onOpenProject, onLearn }: HomeScreenProps) {
         <div className="home-nav-group">
           <button className="home-nav-item active"><Home size={17} /> Home</button>
           <button className="home-nav-item" onClick={onLearn}><BookOpen size={17} /> Aprender</button>
+          <button className="home-nav-item" onClick={onAdmin}><KeyRound size={17} /> Acesso API</button>
         </div>
         <div className="home-nav-label">Arquivos</div>
         <button className="home-nav-item" onClick={() => document.getElementById('projects')?.scrollIntoView({ behavior: 'smooth' })}><FolderOpen size={17} /> Seus projetos</button>

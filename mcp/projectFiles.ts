@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, readdir, rename, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import path from 'node:path'
 import type { FontProject } from '../src/typography/Font'
@@ -10,13 +10,15 @@ import type { PathNode } from '../src/geometry/Node'
 import { TYPER_FILE_FORMAT, TYPER_FILE_VERSION, type TyperProjectFile } from '../src/typography/ProjectFile'
 import { applyPreset, PRESETS, type PresetName } from './presets'
 
-export const projectsRoot = path.resolve(process.env.TYPER_MCP_PROJECTS_DIR || path.join(homedir(), '.typer', 'projects'))
+// TYPER_PROJECTS_DIR is shared by the REST API, HTTP MCP and stdio MCP. Keep
+// the old name as a backwards-compatible alias for existing Codex setups.
+export const projectsRoot = path.resolve(process.env.TYPER_PROJECTS_DIR || process.env.TYPER_MCP_PROJECTS_DIR || path.join(homedir(), '.typer', 'projects'))
 
-function assertProjectId(projectId: string) {
+export function assertProjectId(projectId: string) {
   if (!/^[a-zA-Z0-9_-]+$/.test(projectId)) throw new Error('ID de projeto inválido.')
 }
 
-function projectPath(projectId: string) {
+export function projectPath(projectId: string) {
   assertProjectId(projectId)
   return path.join(projectsRoot, `${projectId}.typer.json`)
 }
@@ -52,7 +54,12 @@ export async function readProjectFile(projectId: string): Promise<TyperProjectFi
 export async function writeProjectFile(file: TyperProjectFile) {
   await ensureProjectsRoot()
   file.updatedAt = new Date().toISOString()
-  await writeFile(projectPath(file.id), `${JSON.stringify(file, null, 2)}\n`, 'utf8')
+  const target = projectPath(file.id)
+  // A rename is atomic on the local filesystem. A half-written project must
+  // never be visible to another API/MCP request or to the editor sync loop.
+  const temporary = path.join(projectsRoot, `.${file.id}.${randomUUID()}.tmp`)
+  await writeFile(temporary, `${JSON.stringify(file, null, 2)}\n`, 'utf8')
+  await rename(temporary, target)
   return { ...file, file: projectPath(file.id) }
 }
 

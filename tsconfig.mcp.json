@@ -10,5 +10,5 @@
     "skipLibCheck": true,
     "types": ["node"]
   },
-  "include": ["mcp/**/*.ts", "src/geometry/**/*.ts", "src/typography/**/*.ts", "src/font-engine/OpenTypeExporter.ts"]
+  "include": ["mcp/**/*.ts", "api/**/*.ts", "src/server/**/*.ts", "src/geometry/**/*.ts", "src/typography/**/*.ts", "src/font-engine/OpenTypeExporter.ts"]
 }

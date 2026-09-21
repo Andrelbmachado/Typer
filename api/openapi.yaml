@@ -1,0 +1,106 @@
+openapi: 3.1.0
+info:
+  title: Typer Automation API
+  version: 1.0.0
+  description: |
+    API local para automatizar projetos vetoriais Typer. Use apenas contornos
+    originais. Valide o projeto antes de exportar e nunca trate TTF como OTF.
+servers:
+  - url: http://127.0.0.1:8787
+security:
+  - bearerAuth: []
+paths:
+  /healthz:
+    get:
+      operationId: healthz
+      security: []
+      responses: { '200': { description: Serviço disponível } }
+  /v1/presets:
+    get:
+      operationId: listPresets
+      responses: { '200': { description: Presets vetoriais } }
+  /v1/presets/{preset}:
+    get:
+      operationId: getPreset
+      parameters: [{ $ref: '#/components/parameters/Preset' }]
+      responses: { '200': { description: Preset encontrado }, '404': { $ref: '#/components/responses/Error' } }
+  /v1/projects:
+    get:
+      operationId: listProjects
+      responses: { '200': { description: Projetos disponíveis } }
+    post:
+      operationId: createProject
+      x-openai-isConsequential: true
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/CreateProject' } } } }
+      responses: { '201': { description: Projeto criado }, '400': { $ref: '#/components/responses/Error' } }
+  /v1/projects/{projectId}:
+    get:
+      operationId: getProject
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      responses: { '200': { description: Projeto Typer }, '404': { $ref: '#/components/responses/Error' } }
+    put:
+      operationId: replaceProject
+      x-openai-isConsequential: true
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }, { name: If-Match, in: header, required: true, schema: { type: string } }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/TyperProjectFile' } } } }
+      responses: { '200': { description: Projeto atualizado }, '409': { $ref: '#/components/responses/Error' }, '428': { $ref: '#/components/responses/Error' } }
+  /v1/projects/{projectId}/preset:
+    post:
+      operationId: applyPreset
+      x-openai-isConsequential: true
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      requestBody: { required: true, content: { application/json: { schema: { type: object, required: [preset], properties: { preset: { $ref: '#/components/schemas/PresetName' } } } } } }
+      responses: { '200': { description: Preset aplicado } }
+  /v1/projects/{projectId}/glyphs:
+    put:
+      operationId: upsertGlyphs
+      x-openai-isConsequential: true
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      requestBody: { required: true, content: { application/json: { schema: { $ref: '#/components/schemas/UpsertGlyphs' } } } }
+      responses: { '200': { description: Glifos atualizados } }
+  /v1/projects/{projectId}/validate:
+    post:
+      operationId: validateProject
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      requestBody: { required: false, content: { application/json: { schema: { type: object, properties: { requiredCharacters: { type: array, items: { type: string } } } } } } }
+      responses: { '200': { description: Relatório de validação } }
+  /v1/projects/{projectId}/exports/ttf:
+    post:
+      operationId: exportTtf
+      x-openai-isConsequential: true
+      parameters: [{ $ref: '#/components/parameters/ProjectId' }]
+      responses: { '201': { description: TTF exportado }, '422': { $ref: '#/components/responses/Error' } }
+  /v1/exports/{downloadToken}:
+    get:
+      operationId: downloadExport
+      parameters: [{ name: downloadToken, in: path, required: true, schema: { type: string } }]
+      responses: { '200': { description: Arquivo TTF, content: { font/ttf: { schema: { type: string, format: binary } } } } }
+components:
+  securitySchemes:
+    bearerAuth: { type: http, scheme: bearer, bearerFormat: Typer API key }
+  parameters:
+    ProjectId: { name: projectId, in: path, required: true, schema: { type: string, pattern: '^[A-Za-z0-9_-]+$' } }
+    Preset: { name: preset, in: path, required: true, schema: { $ref: '#/components/schemas/PresetName' } }
+  responses:
+    Error:
+      description: Erro padronizado
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+  schemas:
+    PresetName: { type: string, enum: [neutral-grotesk, geometric-sans, humanist-sans] }
+    CreateProject:
+      type: object
+      required: [familyName]
+      properties: { familyName: { type: string }, preset: { $ref: '#/components/schemas/PresetName' } }
+    UpsertGlyphs:
+      type: object
+      required: [glyphs]
+      properties: { glyphs: { type: array, items: { type: object } } }
+    TyperProjectFile: { type: object, description: Arquivo .typer.json versionado }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message, requestId]
+          properties: { code: { type: string }, message: { type: string }, requestId: { type: string } }

@@ -2,12 +2,14 @@ import { useCallback, useEffect, useState } from 'react'
 import { EditorScreen } from './EditorScreen'
 import { HomeScreen } from './HomeScreen'
 import { LearnScreen } from './LearnScreen'
+import { AdminAccessScreen } from './AdminAccessScreen'
 
-type Route = { screen: 'home' } | { screen: 'learn' } | { screen: 'editor'; projectId: string }
+type Route = { screen: 'home' } | { screen: 'learn' } | { screen: 'admin' } | { screen: 'editor'; projectId: string }
 
 function readRoute(): Route {
   const match = window.location.hash.match(/^#\/editor\/([^/]+)$/)
   if (match) return { screen: 'editor', projectId: decodeURIComponent(match[1]) }
+  if (window.location.hash === '#/admin/access') return { screen: 'admin' }
   return window.location.hash === '#/learn' ? { screen: 'learn' } : { screen: 'home' }
 }
 
@@ -34,10 +36,16 @@ export function App() {
     window.location.hash = '#/learn'
     setRoute({ screen: 'learn' })
   }, [])
+  const goAdmin = useCallback(() => {
+    window.location.hash = '#/admin/access'
+    setRoute({ screen: 'admin' })
+  }, [])
 
   return route.screen === 'home'
-    ? <HomeScreen onOpenProject={openProject} onLearn={goLearn} />
+    ? <HomeScreen onOpenProject={openProject} onLearn={goLearn} onAdmin={goAdmin} />
     : route.screen === 'learn'
       ? <LearnScreen onHome={goHome} />
-      : <EditorScreen projectId={route.projectId} onHome={goHome} />
+      : route.screen === 'admin'
+        ? <AdminAccessScreen onHome={goHome} />
+        : <EditorScreen projectId={route.projectId} onHome={goHome} />
 }

@@ -2,8 +2,12 @@ node_modules
 dist
 dist-ssr
 *.local
+.env
+.env.*
 .DS_Store
 *.tsbuildinfo
 output/playwright/
 output/mcp/
+output/api/
+output/browser-api/
 .playwright-cli/
