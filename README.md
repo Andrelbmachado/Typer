@@ -1,4 +1,25 @@
-# Typer
+# Typer ✒️
+
+**O "Illustrator das fontes", feito para humanos e para agentes de IA.**
+
+Typer é um criador de fontes: você desenha glifos vetoriais, organiza projetos e exporta fontes instaláveis. A diferença é ser **agent-friendly** — qualquer agente de IA (Claude, ChatGPT, Codex…) consegue criar e editar uma fonte inteira pelo **servidor MCP** ou pela API HTTP do Typer.
+
+## Status
+| Área | Status |
+|---|---|
+| Editor de glifos SVG 1000×1000, guias, carrossel de glifos | ✅ |
+| Projetos locais (IndexedDB) e import `.typer.json` | ✅ |
+| Exportação TTF (opentype.js) | ✅ |
+| Servidor MCP (`npm run mcp:serve`) e API HTTP com OpenAPI | ✅ |
+| Deploy (GitHub Actions) | ✅ |
+| Testes no CI | **planejado** |
+| Kerning automático, variable fonts, OTF/WOFF2 | **planejado** |
+
+Plano completo em **[PLANO.md](PLANO.md)**.
+
+---
+
+## Detalhes técnicos
 
 Typer é um estúdio tipográfico local para desenhar glifos vetoriais, organizar projetos e exportar fontes instaláveis. O editor usa uma prancheta SVG de **1000 × 1000**, mantém um cache offline no IndexedDB e pode sincronizar projetos criados pelo Codex, ChatGPT ou uma GPT Action.
 
@@ -137,3 +158,6 @@ Cada preset declara UPM, ascender, descender, cap height, x-height, espessura su
 React, TypeScript, Vite, Zustand, IndexedDB, Fastify, SQLite (`better-sqlite3`), `opentype.js`, jsPDF, Lucide, Model Context Protocol SDK, Zod e Vitest.
 
 Veja [agent.md](./agent.md) para o mapa técnico e [design.md](./design.md) para as regras de interface.
+
+
+> Este README e o PLANO.md foram reorganizados em 21/10/2026 a partir da visão do André. Itens marcados como **planejado** ainda não existem no código.
