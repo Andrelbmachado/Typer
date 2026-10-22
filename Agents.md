@@ -94,6 +94,68 @@ Ferramentas: `typer_list_projects`, `typer_create_project`, `typer_read_project`
 - Use seleções de contorno para alinhamento de objetos; use seleção de nós para alinhamento pontual.
 - Atalhos: `V`, `P`, `A`, `S`, `B`, `E`, `C`, `T`, `Z`, `H`; `Cmd/Ctrl+Z`, `Cmd/Ctrl+C`, `Cmd/Ctrl+V`, `Delete`.
 
+## Quatro princípios de Karpathy para o agente
+
+Andrej Karpathy descreve o trabalho produtivo com agentes de código como manter o
+agente "na coleira". Em Typer isso vira quatro regras não-negociáveis:
+
+1. **Passos pequenos e verificáveis.** Prefira muitas edições pequenas a um diff
+   gigante. Cada passo deve caber na cabeça de um revisor humano. O hook *Blast
+   Radius* abaixo bloqueia edições grandes demais.
+2. **Verifique cada passo.** Depois de qualquer mudança de código, rode a
+   verificação obrigatória (abaixo). Não empilhe mudanças sobre um estado não
+   testado.
+3. **Humano no loop em zonas sensíveis.** Contrato público (`api/openapi.yaml`),
+   núcleo compartilhado (`src/server/typerService.ts`), CI (`.github/workflows/`)
+   e autorização exigem confirmação humana explícita, não "autopilot".
+4. **Tudo auditável e reproduzível.** Toda edição de agente deve deixar rastro
+   para replay posterior. O hook *Replay Theater* registra isso.
+
+## Hooks de revisão: Blast Radius e Replay Theater
+
+Dois hooks opcionais (Node puro, sem dependências) materializam os princípios 1,
+3 e 4. Eles seguem o protocolo de hooks do Claude Code (leem JSON em stdin).
+
+- `scripts/agent-hooks/blast-radius.mjs` — **PreToolUse** em `Edit|Write|MultiEdit`.
+  Estima o raio de impacto (linhas tocadas) e bloqueia (exit 2) quando passa de
+  `TYPER_BLAST_MAX_LINES` (padrão 150) ou quando toca arquivo sensível. Override
+  consciente: `TYPER_BLAST_ALLOW_BIG=1` (uso humano, nunca em prompt de agente).
+- `scripts/agent-hooks/replay-theater.mjs` — **PostToolUse** em `Edit|Write|MultiEdit`.
+  Nunca bloqueia; grava um evento JSONL append-only em `output/agent-replay/<data>.jsonl`
+  (arquivo, ferramenta, raio, timestamp) para dar "replay" na sessão depois.
+
+Para ativar, adicione ao seu `.claude/settings.json` (ou `settings.local.json`):
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/blast-radius.mjs\"" }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          { "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/scripts/agent-hooks/replay-theater.mjs\"" }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Teste rápido sem o Claude Code (simula o payload de hook):
+
+```bash
+echo '{"tool_name":"Write","tool_input":{"file_path":"x.ts","content":"a\nb"}}' \
+  | node scripts/agent-hooks/blast-radius.mjs; echo "exit=$?"
+```
+
 ## Verificação obrigatória
 
 ```bash
@@ -103,6 +165,11 @@ npm run build
 npm run test:mcp
 npm run openapi:check
 npm run test:api
+npm audit --audit-level=high
 ```
 
-Para alterações de UI, valide no navegador: importação, recolhimento de painéis, restauração de guias, referências, carrossel, toolbar móvel, cursor por ferramenta e exportação. Não use emojis na interface; use Lucide e rótulos acessíveis.
+Essa mesma sequência roda no CI (`.github/workflows/ci.yml`) em todo push e pull
+request. Para alterações de UI, valide no navegador: importação, recolhimento de
+painéis, restauração de guias, referências, carrossel, toolbar móvel, cursor por
+ferramenta e exportação. Não use emojis na interface; use Lucide e rótulos
+acessíveis.

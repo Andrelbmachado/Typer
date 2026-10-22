@@ -12,7 +12,7 @@ Typer é um criador de fontes: você desenha glifos vetoriais, organiza projetos
 | Exportação TTF (opentype.js) | ✅ |
 | Servidor MCP (`npm run mcp:serve`) e API HTTP com OpenAPI | ✅ |
 | Deploy (GitHub Actions) | ✅ |
-| Testes no CI | **planejado** |
+| Testes no CI (`lint`/`test`/`build`/`openapi`/`api`/`mcp`) + `npm audit` | ✅ |
 | Kerning automático, variable fonts, OTF/WOFF2 | **planejado** |
 
 Plano completo em **[PLANO.md](PLANO.md)**.

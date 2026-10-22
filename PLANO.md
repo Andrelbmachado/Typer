@@ -1,9 +1,9 @@
 # PLANO — Typer
 
 ## Fase 1 — Confiabilidade
-- [ ] CI: `lint`, `test`, `build`, `openapi:check`, `test:api`, `test:mcp` em todo PR (hoje o workflow só faz deploy).
-- [ ] `npm audit --audit-level=high` no CI.
-- [ ] 4 princípios do Karpathy no `Agents.md`; hooks Blast Radius / Replay Theater para revisar edições do agente.
+- [x] CI: `lint`, `test`, `build`, `openapi:check`, `test:api`, `test:mcp` em todo PR (`.github/workflows/ci.yml`, job `verify`).
+- [x] `npm audit --audit-level=high` no CI (`.github/workflows/ci.yml`, job `audit`).
+- [x] 4 princípios do Karpathy no `Agents.md`; hooks Blast Radius / Replay Theater (`scripts/agent-hooks/`) para revisar edições do agente, com snippet de ativação em `.claude/settings.json`.
 
 ## Fase 2 — Agent-friendly de verdade
 - [ ] Documentar no README um "fluxo de 5 minutos": conectar o MCP no Claude Code e gerar A–Z.
