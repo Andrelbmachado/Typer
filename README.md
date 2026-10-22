@@ -30,7 +30,7 @@ agente (MCP/REST) ──► typerService ──► projeto .typer.json ──►
 | Sincronização editor ↔ servidor com ETag e resolução de conflito | ✅ |
 | Página Aprender (`#/learn`) | ✅ |
 | Deploy do front-end estático no GitHub Pages | ✅ |
-| Testes no CI (hoje o workflow só faz build + deploy) | **planejado** |
+| Testes no CI (`lint`/`test`/`build`/`openapi:check`/`test:api`/`test:mcp`) + `npm audit` | ✅ |
 | Exportação OTF (writer CFF) e WOFF2 | **planejado** |
 | Kerning (manual/automático) | **planejado** |
 | Variable fonts (eixo de peso) | **planejado** |

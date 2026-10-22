@@ -10,22 +10,26 @@ Estado atual (out/2026): editor, `.typer.json`, TTF, MCP (10 ferramentas), API R
 
 Objetivo: nenhum PR entra sem a mesma verificação exigida em `Agents.md`.
 
-- [ ] **CI de verificação**
+- [x] **CI de verificação**
   - Entrega: `.github/workflows/ci.yml` em `pull_request` e `push` para `main`, Node 20, `npm ci`, depois `lint`, `test`, `build`, `openapi:check`, `test:api`, `test:mcp`.
   - Atenção: `test:mcp` grava em `output/mcp/` via `TYPER_MCP_PROJECTS_DIR`; não definir `TYPER_PROJECTS_DIR` globalmente no job, porque ele tem precedência (`mcp/projectFiles.ts`). Publicar `output/` como artifact.
   - Pronto quando: um PR de teste mostra os 6 passos verdes; um PR com erro de lint proposital fica vermelho.
+  - Feito: job `verify` em `.github/workflows/ci.yml` roda `lint`, `test`, `build`, `openapi:check`, `test:api`, `test:mcp` em todo PR.
 - [ ] **Deploy depende do CI**
   - Entrega: `deploy.yml` com `needs` no job de verificação (ou `workflow_run`).
   - Pronto quando: um push em `main` com teste quebrado não publica no Pages.
-- [ ] **Auditoria de dependências**
+- [x] **Auditoria de dependências**
   - Entrega: passo `npm audit --audit-level=high` no CI.
   - Pronto quando: o passo roda e falha com vulnerabilidade alta.
-- [ ] **Regras para agentes**
+  - Feito: job `audit` em `.github/workflows/ci.yml` roda `npm audit --audit-level=high`.
+- [x] **Regras para agentes**
   - Entrega: seção em `Agents.md` com os 4 princípios do Karpathy (pensar antes de codar, simplicidade, mudanças cirúrgicas, objetivo verificável) e como aplicá-los no Typer.
   - Pronto quando: seção revisada pelo André.
-- [ ] **Hooks de revisão de edições do agente** (Blast Radius / Replay Theater)
+  - Feito: 4 princípios do Karpathy documentados no `Agents.md`.
+- [x] **Hooks de revisão de edições do agente** (Blast Radius / Replay Theater)
   - Entrega: configuração em `.claude/` documentada no `Agents.md`.
   - Pronto quando: uma edição de teste do agente gera o relatório esperado.
+  - Feito: hooks Blast Radius / Replay Theater em `scripts/agent-hooks/`, com snippet de ativação em `.claude/settings.json`.
 
 ## Fase 2 — Agent-friendly de verdade
 

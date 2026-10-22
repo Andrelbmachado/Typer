@@ -10,4 +10,6 @@ output/playwright/
 output/mcp/
 output/api/
 output/browser-api/
+output/agent-replay/
+scripts/agent-hooks/.selftest-out/
 .playwright-cli/
