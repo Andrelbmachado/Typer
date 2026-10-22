@@ -2,90 +2,63 @@
 
 **O "Illustrator das fontes", feito para humanos e para agentes de IA.**
 
-Typer é um criador de fontes: você desenha glifos vetoriais, organiza projetos e exporta fontes instaláveis. A diferença é ser **agent-friendly** — qualquer agente de IA (Claude, ChatGPT, Codex…) consegue criar e editar uma fonte inteira pelo **servidor MCP** ou pela API HTTP do Typer.
+Typer é um estúdio tipográfico local: você desenha glifos vetoriais numa prancheta de **1000 × 1000**, organiza projetos e exporta uma fonte **TTF instalável**. O diferencial é ser **agent-friendly** — Claude, ChatGPT, Codex ou qualquer cliente MCP consegue criar, validar e exportar uma fonte inteira pelo **servidor MCP** ou pela **API REST**, enquanto você revisa e refina tudo no editor visual.
+
+```
+agente (MCP/REST) ──► typerService ──► projeto .typer.json ──► editor visual ──► TTF
+                            ▲                                       │
+                            └──────── sincronização (ETag) ─────────┘
+```
+
+## Por que usar
+
+- **Um núcleo, três portas.** MCP stdio, MCP Streamable HTTP e REST chamam os mesmos handlers de `src/server/typerService.ts` — o que um agente faz, o editor vê.
+- **Agente gera, humano refina.** Presets vetoriais e perfis de referência dão ao agente métricas consistentes; o editor serve para revisão e ajuste fino.
+- **Local e offline primeiro.** Projetos ficam no IndexedDB do navegador e em `~/.typer/projects`; a sincronização é opcional.
+- **Acesso controlado.** Chaves com escopo, armazenadas só como SHA-256, e conflitos de revisão explícitos (`409`).
 
 ## Status
+
 | Área | Status |
 |---|---|
-| Editor de glifos SVG 1000×1000, guias, carrossel de glifos | ✅ |
-| Projetos locais (IndexedDB) e import `.typer.json` | ✅ |
-| Exportação TTF (opentype.js) | ✅ |
-| Servidor MCP (`npm run mcp:serve`) e API HTTP com OpenAPI | ✅ |
-| Deploy (GitHub Actions) | ✅ |
-| Testes no CI (`lint`/`test`/`build`/`openapi`/`api`/`mcp`) + `npm audit` | ✅ |
-| Kerning automático, variable fonts, OTF/WOFF2 | **planejado** |
+| Editor SVG 1000×1000: caneta, nós, retângulo, pincel, guias com cor/bloqueio, carrossel de glifos | ✅ |
+| Métricas por glifo (largura de avanço e side bearings) | ✅ |
+| Projetos locais (IndexedDB) e import/export `.typer.json` | ✅ |
+| Referências visuais: PNG, JPG, WebP, SVG, TTF e OTF (camada de baixa opacidade) | ✅ |
+| Exportação TTF (fonte inteira) e SVG/PDF/PNG/JPG (glifo atual) | ✅ |
+| Servidor MCP (10 ferramentas) e API REST com OpenAPI, chaves e escopos | ✅ |
+| Sincronização editor ↔ servidor com ETag e resolução de conflito | ✅ |
+| Página Aprender (`#/learn`) | ✅ |
+| Deploy do front-end estático no GitHub Pages | ✅ |
+| Testes no CI (`lint`/`test`/`build`/`openapi:check`/`test:api`/`test:mcp`) + `npm audit` | ✅ |
+| Exportação OTF (writer CFF) e WOFF2 | **planejado** |
+| Kerning (manual/automático) | **planejado** |
+| Variable fonts (eixo de peso) | **planejado** |
+| Importar SVG/fonte como contornos editáveis (hoje entram só como referência) | **planejado** |
+| Prévia PNG devolvida ao agente para autoavaliação | **planejado** |
 
-Plano completo em **[PLANO.md](PLANO.md)**.
+Roteiro detalhado em **[PLANO.md](PLANO.md)**.
 
 ---
 
-## Detalhes técnicos
+## Início rápido
 
-Typer é um estúdio tipográfico local para desenhar glifos vetoriais, organizar projetos e exportar fontes instaláveis. O editor usa uma prancheta SVG de **1000 × 1000**, mantém um cache offline no IndexedDB e pode sincronizar projetos criados pelo Codex, ChatGPT ou uma GPT Action.
-
-O editor mostra os glifos anterior e seguinte como canvas reduzidos e usa uma transição de carrossel na navegação. Campos numéricos podem ser digitados ou ajustados arrastando horizontalmente. Cada linha-guia possui cor e bloqueio próprios; quando desbloqueada, pode ser arrastada verticalmente no canvas.
-
-## Rodar e verificar
+Requer Node.js 20+.
 
 ```bash
 npm install
-npm run dev
-npm run lint
-npm test
-npm run build
-npm run openapi:check
-npm run test:api
+npm run dev          # editor em http://localhost:5173
 ```
 
-Validação completa do MCP, incluindo o estudo vetorial `A/B/C`, a amostra `Helvetica`, exportação e parse do TTF:
+Abra a Home, clique em **Nova fonte**, escolha uma letra guia no topo e comece a desenhar com a caneta (`P`).
 
-```bash
-npm run test:mcp
-```
-
-Os artefatos de validação são gravados em `output/mcp/` e as evidências do navegador em `output/playwright/`. `test:api` cobre chaves hash-only, escopos, conflito de revisão, API HTTP, handshake MCP HTTP, exportação TTF e parse via `opentype.js`.
-
-## Fluxo do app
-
-1. A Home lista projetos reais salvos neste navegador.
-2. **Nova fonte** cria um projeto local e abre o editor.
-3. **Importar projeto** aceita um arquivo versionado `.typer.json`, inclusive um criado pelo MCP. Com uma chave de API na sessão, projetos remotos também aparecem automaticamente.
-4. No editor, escolha uma letra guia no topo e desenhe com a caneta, formas ou pincel.
-5. Camadas selecionam contornos inteiros; o painel de alinhamento centraliza um contorno na área do glifo ou alinha vários contornos entre si.
-6. **Exportar** oferece TTF, SVG, PDF, PNG, JPG e JPEG. OTF permanece desabilitado até existir um writer CFF real.
-
-O botão Home salva o projeto antes de voltar. O menu Importar atualiza o projeto a partir de `.typer.json` e baixa uma cópia editável. A rota `#/admin/access` cria, revoga e exclui chaves de automação sem persistir o token mestre no navegador.
-
-No editor, **Importar** aceita `.typer.json`, TTF, OTF, SVG, PNG, JPG e WebP. Arquivos TyperJSON atualizam o projeto atual; fontes e imagens entram como referências visuais persistidas no projeto. Consulte [Agents.md](./Agents.md) para o contrato completo de automação por IA.
-
-## Caneta e edição
-
-- Clique cria um nó de canto.
-- Clique e arraste cria um nó suave com alças espelhadas.
-- Clique novamente no primeiro nó fecha o contorno.
-- `Enter` ou `Escape` encerra o contorno atual sem apagar o trabalho.
-- Arrastar um nó move junto suas alças; uma seleção múltipla se move como conjunto.
-- Contornos abertos continuam editáveis, mas não entram no TTF.
-
-Atalhos principais: `V` seleção, `P` caneta, `A` nós, `S` retângulo, `B` pincel, `Z` zoom e `H` mover canvas. `⌘/Ctrl+Z`, `⌘/Ctrl+C`, `⌘/Ctrl+V` e `Delete/Backspace` funcionam no editor.
-
-## Servidor MCP
-
-Inicie o servidor stdio:
+### Conectar um agente via MCP (stdio)
 
 ```bash
 npm run mcp:serve
 ```
 
-O diretório padrão é `~/.typer/projects`. Para usar outro diretório seguro, defina `TYPER_PROJECTS_DIR`; `TYPER_MCP_PROJECTS_DIR` continua aceito como alias. Exemplo de registro no Codex:
-
-```bash
-codex mcp add typer --env TYPER_MCP_PROJECTS_DIR=$HOME/.typer/projects -- \
-  node /Users/andremachado/Documents/Trabalho/Sites/Typer/node_modules/tsx/dist/cli.mjs \
-  /Users/andremachado/Documents/Trabalho/Sites/Typer/mcp/server.ts
-```
-
-Configuração genérica de cliente MCP:
+Configuração genérica de cliente MCP (troque `<repo>` pelo caminho absoluto deste repositório):
 
 ```json
 {
@@ -93,35 +66,102 @@ Configuração genérica de cliente MCP:
     "typer": {
       "command": "node",
       "args": [
-        "/Users/andremachado/Documents/Trabalho/Sites/Typer/node_modules/tsx/dist/cli.mjs",
-        "/Users/andremachado/Documents/Trabalho/Sites/Typer/mcp/server.ts"
+        "<repo>/node_modules/tsx/dist/cli.mjs",
+        "<repo>/mcp/server.ts"
       ],
       "env": {
-        "TYPER_MCP_PROJECTS_DIR": "/Users/andremachado/.typer/projects"
+        "TYPER_PROJECTS_DIR": "/Users/<voce>/.typer/projects"
       }
     }
   }
 }
 ```
 
-Ferramentas disponíveis:
+Claude Code:
 
-- `typer_list_projects`
-- `typer_create_project`
-- `typer_read_project`
-- `typer_get_preset`
-- `typer_get_reference_profile`
-- `typer_create_reference_set`
-- `typer_apply_preset`
-- `typer_upsert_glyphs`
-- `typer_validate_project`
-- `typer_export_ttf`
+```bash
+claude mcp add typer --env TYPER_PROJECTS_DIR=$HOME/.typer/projects -- \
+  node <repo>/node_modules/tsx/dist/cli.mjs <repo>/mcp/server.ts
+```
 
-Fluxo recomendado para uma IA: consultar `reference-neutral-regular-abc` → criar o estudo `A/B/C` → validar curvas, eixos e contraformas → revisar no canvas 1000 × 1000 → só então ampliar a família. Para geração manual, crie projeto → consulte/aplique preset → insira glifos em lote → valide caracteres obrigatórios → exporte TTF. A fonte de teste `Typer Neutral` cria `H/e/l/v/t/i/c/a` com desenho original de uma sans neutra, não uma cópia de Helvetica.
+Codex:
 
-## API REST, chave e sincronização
+```bash
+codex mcp add typer --env TYPER_PROJECTS_DIR=$HOME/.typer/projects -- \
+  node <repo>/node_modules/tsx/dist/cli.mjs <repo>/mcp/server.ts
+```
 
-Inicie o serviço HTTP local:
+O diretório padrão é `~/.typer/projects`. `TYPER_MCP_PROJECTS_DIR` continua aceito como alias de `TYPER_PROJECTS_DIR`.
+
+Depois peça ao agente algo como: *"Crie um projeto Typer chamado Minha Sans, aplique o preset `neutral-grotesk`, desenhe A, B e C, valide e exporte o TTF."*
+
+## Ferramentas MCP
+
+| Ferramenta | O que faz |
+|---|---|
+| `typer_list_projects` | Lista projetos no diretório de projetos |
+| `typer_create_project` | Cria um projeto vazio |
+| `typer_read_project` | Lê um projeto completo |
+| `typer_get_preset` | Devolve métricas de um preset vetorial |
+| `typer_apply_preset` | Aplica um preset a um projeto |
+| `typer_get_reference_profile` | Devolve um perfil de referência (ex.: `reference-neutral-regular-abc`) |
+| `typer_create_reference_set` | Cria um projeto de estudo a partir de um perfil |
+| `typer_upsert_glyphs` | Insere ou atualiza glifos em lote |
+| `typer_validate_project` | Valida contornos e caracteres obrigatórios |
+| `typer_export_ttf` | Exporta o TTF (exige contornos fechados) |
+
+**Fluxo recomendado para uma IA:** criar projeto → consultar/aplicar preset → `upsert_glyphs` em lote → `validate_project` → `export_ttf`. Para estudos, consultar `reference-neutral-regular-abc` → criar o estudo `A/B/C` → validar curvas, eixos e contraformas → revisar no canvas → só então ampliar a família.
+
+O contrato completo para agentes (modelo geométrico, guias, referências, regras de segurança) está em **[Agents.md](./Agents.md)**.
+
+### Presets vetoriais
+
+- `neutral-grotesk` — baixo contraste e proporções neutras.
+- `geometric-sans` — construção modular e círculos amplos.
+- `humanist-sans` — curvas mais orgânicas e contraste moderado.
+
+Cada preset declara UPM, ascender, descender, cap height, x-height, espessura sugerida, overshoot, largura e side bearing.
+
+### Scripts de exemplo
+
+```bash
+npm run font:reference   # gera "Typer Reference Sans ABC" (.ttf, .typer.json e specimen HTML) na Área de Trabalho
+npm run pen:exercises    # gera um projeto de exercícios da caneta na Área de Trabalho
+```
+
+Use `TYPER_DESKTOP_DIR` para mudar a pasta de saída. A amostra `Typer Neutral` (`H/e/l/v/t/i/c/a`, usada nos testes) é um desenho original de sans neutra — não uma cópia de Helvetica.
+
+## Usando o editor
+
+1. A **Home** (`#/home`) lista os projetos salvos neste navegador e, com uma chave de API na sessão, também os do servidor.
+2. **Nova fonte** cria um projeto local e abre o editor (`#/editor/<projectId>`).
+3. **Importar** aceita `.typer.json` (atualiza o projeto) e TTF, OTF, SVG, PNG, JPG e WebP (entram como referências visuais persistidas).
+4. Escolha uma letra guia no topo; os glifos anterior e seguinte aparecem como miniaturas no carrossel.
+5. **Camadas** seleciona contornos inteiros; **Alinhar e centralizar** centraliza um contorno no glifo ou alinha vários entre si.
+6. **Exportar** oferece TTF (fonte inteira) e SVG, PDF, PNG, JPG e JPEG (glifo atual). OTF aparece desabilitado até existir um writer CFF.
+
+O botão Home salva antes de voltar. Campos numéricos aceitam digitação ou arraste horizontal. Cada linha-guia tem cor e bloqueio próprios; desbloqueada, pode ser arrastada no canvas.
+
+### Caneta
+
+- Clique cria um nó de canto; clique e arraste cria um nó suave com alças espelhadas.
+- Clique no primeiro nó para fechar o contorno; `Enter` ou `Escape` encerra sem apagar.
+- Arrastar um nó move junto suas alças; seleções múltiplas se movem em conjunto.
+- Contornos abertos continuam editáveis, mas não entram no TTF.
+
+### Atalhos
+
+| Tecla | Ferramenta | Tecla | Ferramenta |
+|---|---|---|---|
+| `V` | Selecionar | `E` | Excluir nó |
+| `P` | Caneta | `C` | Abrir contorno (tesoura) |
+| `A` | Editar nós | `T` | Inverter contorno |
+| `S` | Retângulo | `Z` | Zoom |
+| `B` | Pincel livre | `H` | Mover canvas |
+
+Também: `⌘/Ctrl+Z`, `⌘/Ctrl+C`, `⌘/Ctrl+V` e `Delete/Backspace`.
+
+## API REST, chaves e sincronização
 
 ```bash
 export TYPER_PROJECTS_DIR="$HOME/.typer/projects"
@@ -133,31 +173,44 @@ export TYPER_ALLOWED_ORIGINS=http://127.0.0.1:5173
 npm run api:serve
 ```
 
-O serviço oferece `http://127.0.0.1:8787/docs`, `openapi.json` e o contrato versionado em [api/openapi.yaml](./api/openapi.yaml). A central `#/admin/access` usa o token mestre somente em memória para emitir uma chave `typer_live_…`. O banco SQLite guarda **somente SHA-256**, prefixo, escopos, status e auditoria; o segredo aparece uma vez.
+- Docs interativas em `http://127.0.0.1:8787/docs`; contrato em `/openapi.json` e [api/openapi.yaml](./api/openapi.yaml).
+- Endpoints públicos (`/v1/...`): `healthz`, presets, perfis de referência, projetos, conjunto de referência, preset, glifos, validação, exportação TTF e download. Admin: `/v1/admin/keys` e `/v1/admin/audit`.
+- A central `#/admin/access` usa o token mestre **só em memória** para emitir chaves `typer_live_…`. O SQLite guarda apenas SHA-256, prefixo, escopos, status e auditoria; o segredo aparece uma única vez.
+- Escopos: `projects:read`, `projects:write`, `fonts:export`.
+- O editor salva primeiro no IndexedDB. Com uma chave na sessão, sincroniza via ETag/`If-Match` e consulta o servidor a cada 5 s. Um `409` abre a escolha: aceitar a versão do servidor, manter a local ou salvar como novo projeto.
 
-Escopos: `projects:read`, `projects:write`, `fonts:export`. O editor salva primeiro no IndexedDB. Quando existe uma chave na sessão, ele usa ETag/`If-Match` para sincronizar e consulta o servidor periodicamente. Conflitos retornam `409` e oferecem aceitar o servidor, manter o local ou salvar uma cópia.
-
-Endpoints: `GET /healthz`, `GET /openapi.json`, `GET /docs`, presets, projetos, preset, glifos, validação, TTF/download e endpoints administrativos em `/v1/admin/*`. OTF não é exposto pela API porque ainda não há writer CFF válido.
+> **Segurança:** nunca grave `TYPER_ADMIN_TOKEN` em arquivo versionado, IndexedDB, logs ou prompts. Agentes (GPT/MCP) não criam nem revogam chaves.
 
 ## ChatGPT `@typer` e GPT Actions
 
-- `npm run mcp:http` inicia o adaptador MCP Streamable HTTP em `/mcp` (é o mesmo servidor da API). Ele compartilha as mesmas oito ferramentas do stdio.
-- Para usar `@typer` no ChatGPT, a instância local precisa estar atrás de um túnel privado e o workspace precisa ter Developer Mode compatível; a criação/publicação do app é manual. Veja [docs/openai/chatgpt-mcp-setup.md](./docs/openai/chatgpt-mcp-setup.md).
-- Para uma GPT Action, importe [api/openapi.yaml](./api/openapi.yaml), configure Bearer com uma chave limitada e siga [docs/openai/gpt-actions-setup.md](./docs/openai/gpt-actions-setup.md). As instruções do GPT estão em [docs/openai/typer-gpt-instructions.md](./docs/openai/typer-gpt-instructions.md).
+- `npm run mcp:http` sobe o mesmo servidor da API, com MCP Streamable HTTP em `POST /mcp` e as mesmas 10 ferramentas do stdio.
+- Para `@typer` no ChatGPT, exponha a instância só por túnel privado com Developer Mode habilitado; a criação do app é manual. Veja [docs/openai/chatgpt-mcp-setup.md](./docs/openai/chatgpt-mcp-setup.md).
+- Para GPT Actions, importe [api/openapi.yaml](./api/openapi.yaml) com Bearer de uma chave limitada e siga [docs/openai/gpt-actions-setup.md](./docs/openai/gpt-actions-setup.md) e [docs/openai/typer-gpt-instructions.md](./docs/openai/typer-gpt-instructions.md).
 
-## Presets vetoriais
+## Verificação
 
-- `neutral-grotesk`: baixo contraste e proporções neutras.
-- `geometric-sans`: construção modular e círculos amplos.
-- `humanist-sans`: curvas mais orgânicas e contraste moderado.
+```bash
+npm run lint
+npm test               # Vitest: geometria (caneta, alinhamento), fonte, perfis de referência
+npm run build
+npm run openapi:check
+npm run test:api       # chaves hash-only, escopos, 409, REST, handshake MCP HTTP, TTF + parse opentype.js
+npm run test:mcp       # MCP ponta a ponta: estudo A/B/C, amostra Typer Neutral, export e parse do TTF
+```
 
-Cada preset declara UPM, ascender, descender, cap height, x-height, espessura sugerida, overshoot, largura e side bearing. O MCP devolve esses dados para orientar a geração consistente dos glifos.
+Artefatos ficam em `output/mcp/` e `output/api/`. Hoje esses comandos rodam localmente; levá-los ao CI é a Fase 1 do [PLANO.md](PLANO.md).
 
 ## Tecnologias
 
-React, TypeScript, Vite, Zustand, IndexedDB, Fastify, SQLite (`better-sqlite3`), `opentype.js`, jsPDF, Lucide, Model Context Protocol SDK, Zod e Vitest.
+React 18, TypeScript, Vite, Zustand, IndexedDB, Fastify, SQLite (`better-sqlite3`), `opentype.js`, jsPDF, Lucide, Model Context Protocol SDK, Zod e Vitest.
 
-Veja [agent.md](./agent.md) para o mapa técnico e [design.md](./design.md) para as regras de interface.
+## Documentação relacionada
 
+- [Agents.md](./Agents.md) — guia operacional para agentes de IA.
+- [agent.md](./agent.md) — mapa técnico do código.
+- [design.md](./design.md) e [design-qa.md](./design-qa.md) — regras e QA de interface.
+- [PLANO.md](PLANO.md) — roteiro por fases.
 
-> Este README e o PLANO.md foram reorganizados em 21/10/2026 a partir da visão do André. Itens marcados como **planejado** ainda não existem no código.
+## Direitos sobre desenhos
+
+Typer não copia outlines proprietários. Fontes externas importadas servem só como referência visual; extraia características gerais, nunca replique contornos.
